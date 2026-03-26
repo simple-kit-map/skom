@@ -1,52 +1,66 @@
 package cx.ctt.skom;
 
-import cx.ctt.skom.Main;
 import net.minestom.server.command.CommandSender;
 import net.minestom.server.command.builder.Command;
-import net.minestom.server.command.builder.arguments.ArgumentWord;
 import net.minestom.server.entity.Player;
+import org.jetbrains.annotations.NotNull;
 
 import java.util.UUID;
 
 /**
-  *   Creatable is a features of SKM that can be created and managed by players
+  *   Creatable is a feature of SKM that can be created and managed by players
   *   This includes kits, configs for combat (kb presets), gamerules, minigames
-  *
-  *
   **/
 
-public abstract class Creatable extends Command {
+public abstract interface Creatable {
 
-    public static String featureName; // e.g. Kit
+    static boolean isNotAlphaNumeric(@NotNull String input) {
+        for (Character c : input.toCharArray()) {
+            if ("_".contains(Character.toString(c))) {
+                continue;
+            }
+            if (!Character.isLetterOrDigit(c)) {
+                return true;
+            }
+        }
+        return false;
+    }
 
-    public String getCreatorName(String cName){
-        String creatorId = Main.JEDIS.get(featureName + ':' + cName + ":creator");
+    static boolean isNotAlphaNumeric(@NotNull String input, String whitelist) {
+        for (Character c : input.toCharArray()) {
+            if (!Character.isLetterOrDigit(c) && whitelist.indexOf(c) != 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    String featureName(); // e.g. kit
+
+    default String getCreatorName(String cName){
+        String creatorId = Main.JEDIS.get(featureName() + ':' + cName + ":creator");
         return Main.JEDIS.hget("player_cache", creatorId);
     }
 
-    public boolean exists(String name){
-        return !Main.JEDIS.keys(featureName + ':' + name).isEmpty();
+    static boolean exists(String featureName, String name){
+        return Main.JEDIS.exists("skm:"+ featureName + ":" + name);
     }
 
-    public void use(CommandSender sender, String name) {
-        if (exists(name)) {
-            sender.sendMessage(String.format("%s '%s' does not exist", featureName, name));
-            sender.sendMessage(featureName + " '" + name + "' does not exist");
+    default void use(CommandSender sender, String name) {
+        if (exists(featureName(), name)) {
+            sender.sendMessage(String.format("%s '%s' does not exist", featureName(), name));
+            sender.sendMessage(featureName() + " '" + name + "' does not exist");
         }
     }
 
-    public void create(Player player, String name){
-        if (exists(name)){
-            player.sendMessage(featureName + " '" + name + "' already exists");
+    default void create(Player player, String name){
+        if (exists(featureName(), name)){
+            player.sendMessage(featureName() + " '" + name + "' already exists");
             return;
         }
-        Main.JEDIS.set(featureName + ':' + name + ":creatorId", player.getUuid().toString());
-        Main.JEDIS.set(featureName + ':' + name + ":id", UUID.randomUUID().toString());
-        Main.JEDIS.set(featureName + ':' + name + ":createdAt", String.valueOf(System.currentTimeMillis()));
+        Main.JEDIS.set(featureName() + ':' + name + ":creatorId", player.getUuid().toString());
+        Main.JEDIS.set(featureName() + ':' + name + ":id", UUID.randomUUID().toString());
+        Main.JEDIS.set(featureName() + ':' + name + ":createdAt", String.valueOf(System.currentTimeMillis()));
     }
 
-    public Creatable(String name, String... aliases) {
-        super(name, aliases);
-        Creatable.featureName = name;
-    }
 }

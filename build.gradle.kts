@@ -1,43 +1,41 @@
+import java.net.URL
+
 plugins {
     java
     idea
+    application
     id("com.gradleup.shadow") version "8.3.0"
     id("org.graalvm.buildtools.native") version "0.11.1"
-//    kotlin("jvm")
 }
-println("Gradle uses Java ${org.gradle.internal.jvm.Jvm.current()}")
-group = "cx.ctt.skom"
 
-repositories {
-    mavenCentral()
-    mavenLocal()
-    maven("https://repo.smolder.cloud/public/")
-    maven("https://jitpack.io")
-}
+println("Gradle ${gradle.gradleVersion} with Java ${org.gradle.internal.jvm.Jvm.current()}")
+group = "cx.ctt.skom"
+val skomMainClass = "cx.ctt.skom.Main"
 
 dependencies {
+    // https://repo1.maven.org/maven2/org/reflections/reflections/maven-metadata.xml
     implementation("org.reflections:reflections:0.10.2")
-    implementation("org.slf4j:slf4j-api:2.0.17")
-    implementation("ch.qos.logback:logback-classic:1.5.23")
+    // https://repo1.maven.org/maven2/org/slf4j/slf4j-api/maven-metadata.xml
+    implementation("org.slf4j:slf4j-api:2.1.0-alpha1")
+    // https://repo1.maven.org/maven2/ch/qos/logback/logback-classic/maven-metadata.xml
+    implementation("ch.qos.logback:logback-classic:1.5.32")
 
-    implementation("redis.clients:jedis:7.2.0")
+    // https://repo1.maven.org/maven2/redis/clients/jedis/maven-metadata.xml
+    implementation("redis.clients:jedis:7.4.0")
 
-    implementation("net.minestom:minestom:2025.12.20-1.21.11")
-    implementation("fr.ghostrider584:axiom-minestom:0.0.3")
-//    implementation(project(":minestom-mechanics-parent:minestom-mechanics-lib"))
-//    implementation("com.minestom:minestom-mechanics-lib:1.0-SNAPSHOT")
-//    implementation(":minestom-mechanics-parent:minestom-mechanics-lib")
-    implementation(files(
-        "${projectDir}/../minestom-mechanics-lib-maven/minestom-mechanics-lib/target/minestom-mechanics-lib-1.0-SNAPSHOT.jar"))
+    // https://repo1.maven.org/maven2/net/minestom/minestom/maven-metadata.xml
+    implementation("net.minestom:minestom:2026.03.25-1.21.11")
+    // https://repo.smolder.fr/#/public/fr/ghostrider584/axiom-minestom
+    implementation("fr.ghostrider584:axiom-minestom:0.0.4")
 
-
-//    implementation("com.github.TogAr2:MinestomPvP:56a831b41c")
-    implementation(files("${projectDir}/../MinestomPvP/build/libs/MinestomPvP.jar"))
-//    implementation(project(":MinestomPvP"))
-//    implementation(project(":VanillaReimplementation"))
-//    implementation("com.github.Minestom:VanillaReimplementation:-SNAPSHOT")
-//    implementation("com.github.Minestom:VanillaReimplementation:a79a599b27")
+    // TODO: get them merged
+    // https://github.com/couleurm/MinestomMechanics -> https://github.com/Term4/MinestomMechanics
+    implementation("com.github.couleurm:MinestomMechanics:-SNAPSHOT")
+    // https://github.com/couleurm/Minestom173 -> https://github.com/emortaldev/Minestom173
+	implementation("com.github.couleurm:Minestom173:-SNAPSHOT")
 }
+
+
 
 java {
     toolchain {
@@ -45,10 +43,11 @@ java {
     }
 }
 
+
 tasks {
     jar {
         manifest {
-            attributes["Main-Class"] = "cx.ctt.skom.Main"
+            attributes["Main-Class"] = skomMainClass
         }
     }
 
@@ -68,7 +67,7 @@ graalvmNative {
     binaries {
         named("main") {
             imageName.set("marathon")
-            mainClass.set("cx.ctt.skom.Main")
+            mainClass.set(mainClass)
 
 //            buildArgs.add("-march=native")
             buildArgs.add("-Os")
@@ -90,3 +89,34 @@ graalvmNative {
         }
     }
 }
+
+tasks.register("printClasspath") {
+    println(configurations.runtimeClasspath)
+}
+
+val version = "1.0.1"
+val assetName = "ViaProxyAuthHook-Agent-$version.jar"
+val downloadUrl = "https://github.com/ViaVersionAddons/ViaProxyAuthHook/releases/download/v$version/$assetName"
+val agentJarFile = File(projectDir, assetName)
+
+tasks.register<Copy>("downloadViaProxyAuthHookAgent") {
+    if (!agentJarFile.exists()) {
+        logger.lifecycle("Downloading $downloadUrl")
+        URL(downloadUrl).openStream().use { input ->
+            agentJarFile.outputStream().use { output ->
+                input.copyTo(output)
+            }
+        }
+        logger.lifecycle("Downloaded Java agent to $agentJarFile")
+    }
+}
+tasks.named<JavaExec>("run") {
+    mainClass = skomMainClass
+    dependsOn("downloadViaProxyAuthHookAgent")
+    jvmArgs("-javaagent:${agentJarFile.absolutePath}")
+}
+//
+//application {
+//    applicationDefaultJvmArgs = listOf("-javaagent:${agentJarFile.absolutePath}")
+//    mainClass = skomMainClass
+//}

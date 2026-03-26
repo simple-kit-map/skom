@@ -3,9 +3,16 @@ pluginManagement {
         kotlin("jvm") version "2.2.20"
     }
 }
-//include("MinestomPvP")
-//include("minestom")
-//include("VanillaReimplementation")
 rootProject.name = "skom"
-includeBuild("/mnt/d/GitHub/j/STOM/minestom-mechanics-lib-maven/minestom-mechanics-lib")
-includeBuild("/mnt/d/GitHub/j/STOM/MinestomPvP")
+
+dependencyResolutionManagement {
+    repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+    repositories {
+        mavenCentral()
+        mavenLocal()
+        maven("https://repo.smolder.cloud/public/")
+        maven("https://jitpack.io")
+        maven { url = uri("https://jitpack.io") }
+    }
+}
+

@@ -1,8 +1,10 @@
 package cx.ctt.skom.events;
 
 import cx.ctt.skom.Main;
-import io.github.togar2.pvp.player.CombatPlayer;
+//import io.github.togar2.pvp.player.CombatPlayer;
+import cx.ctt.skom.commands.admin.NpcCommand;
 import net.minestom.server.MinecraftServer;
+import net.minestom.server.ServerFlag;
 import net.minestom.server.command.CommandSender;
 import net.minestom.server.component.DataComponents;
 import net.minestom.server.coordinate.Pos;
@@ -23,7 +25,7 @@ import org.jetbrains.annotations.Nullable;
 import java.util.HashSet;
 import java.util.Set;
 
-import static cx.ctt.skom.commands.DashCommand.roundDouble;
+import static cx.ctt.skom.commands.mechanics.DashCommand.roundDouble;
 import static java.lang.Math.*;
 
 public class Knockback {
@@ -32,7 +34,6 @@ public class Knockback {
 
     public static void scoreKb(LivingEntity damager, LivingEntity damagee) {
         KnockbackPreset a = new KnockbackPreset();
-
 
         double distanceX = damager.getPosition().x() - damagee.getPosition().x();
         double distanceZ = damager.getPosition().z() - damagee.getPosition().z();
@@ -92,7 +93,8 @@ public class Knockback {
             }
             return;
         }
-        playerVelocity = playerVelocity.withX((playerVelocity.x() / a.horizontalFriction) - (distanceX / magnitude * a.horizontal))
+        playerVelocity = playerVelocity
+                .withX((playerVelocity.x() / a.horizontalFriction) - (distanceX / magnitude * a.horizontal))
                 .withY((playerVelocity.y() / a.verticalFriction) + a.vertical)
                 .withZ((playerVelocity.z() / a.horizontalFriction) - (distanceZ / magnitude * a.horizontal));
 
@@ -107,27 +109,36 @@ public class Knockback {
             }
         }
 
-        if (damager instanceof CombatPlayer p) {
+        if (damager instanceof Player p) {
             bonusKnockback += p.isSprinting() ? 1 : 0;
 //            ((Player)p).setSprinting(false); /// TODO: add proper wtap mechanicsijdiaowdiajnm
         }
 
+        if (bonusKnockback > 0) {
+            playerVelocity = playerVelocity.add(
+                    new Vec(
+                            -sin((damager.getPosition().yaw() * Math.PI / 180.0f)) * bonusKnockback * a.horizontalExtra,
+                            a.verticalExtra,
+                            cos((damager.getPosition().yaw() * Math.PI / 180.0f)) * bonusKnockback * a.horizontalExtra)
+            );
+        }
+
         if (playerVelocity.y() > a.verticalLimit) playerVelocity = playerVelocity.withY(a.verticalLimit);
 
-        if (bonusKnockback > 0) {
-            playerVelocity.add(new Vec(-sin((damager.getPosition().yaw() * Math.PI / 180.0f)) * bonusKnockback * a.horizontalExtra, a.verticalExtra, cos((damager.getPosition().yaw() * Math.PI / 180.0f)) * bonusKnockback * a.horizontalExtra));
-        }
 //        if (damagee instanceof Player p) printVec(p, playerVelocity, "SKMVELO");
 //        if (damager instanceof Player p) printVec(p, playerVelocity, "SKMVELO");
         damagee.damage(DamageType.PLAYER_ATTACK, 0);
-        damagee.setVelocity(playerVelocity);
-        if (damagee instanceof CombatPlayer player) {
-            player.sendImmediateVelocityUpdate();
+        damagee.setVelocity(playerVelocity.mul(5));
+        if (damagee instanceof Player player) {
+//            player.sendImmediateVelocityUpdate();
             ((Player) player).sendPacket(new EntityVelocityPacket(((Player) player).getEntityId(), playerVelocity));
         }
         invulnerablePlayers.add(damagee);
-        damagee.scheduler().scheduleTask(() -> invulnerablePlayers.remove(damagee), TaskSchedule.tick(9), TaskSchedule.stop());
-    }
+        Main.LOG.debug("server tps: {}", ServerFlag.SERVER_TICKS_PER_SECOND);
+        damagee.scheduler().scheduleTask(() -> invulnerablePlayers.remove(damagee), TaskSchedule.tick(
+                (ServerFlag.SERVER_TICKS_PER_SECOND / 2) - 1
+        ), TaskSchedule.stop());
+}
 
     public static void register(GlobalEventHandler handler) {
         handler.addListener(EntityVelocityEvent.class, event -> {
@@ -135,8 +146,8 @@ public class Knockback {
                 printVec(p, event.getVelocity(), "VELO-EVENT");
             });
         });
-
         handler.addListener(EntityAttackEvent.class, event -> {
+            if (event.getTarget() instanceof NpcCommand.Npc) return;
             if (!(event.getEntity() instanceof LivingEntity damager)) return;
             if (!(event.getTarget() instanceof LivingEntity damagee)) return;
             if (invulnerablePlayers.contains(damagee)) return;
@@ -144,7 +155,6 @@ public class Knockback {
 
             scoreKb(damager, damagee);
         });
-
     }
     public static void printVec(CommandSender sender, Vec vec, @Nullable String haha) {
         sender.sendMessage(roundDouble(vec.x()) + ", " + roundDouble(vec.y()) + ", " + roundDouble(vec.z()) + " " + haha);
