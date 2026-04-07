@@ -21,7 +21,6 @@ import net.minestom.server.instance.anvil.AnvilLoader;
 import net.minestom.server.instance.block.Block;
 import net.minestom.server.registry.RegistryKey;
 import net.minestom.server.world.DimensionType;
-import org.jetbrains.annotations.NotNull;
 import org.reflections.Reflections;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -31,6 +30,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
 
@@ -38,8 +38,8 @@ public class Main {
     public static final HashMap<String, InstanceContainer> INSTANCES = new HashMap<>();
 
     // used to get the string name of an instance from an instance object https://stackoverflow.com/a/2904266
-    public String getKeyByValue(HashMap<String, InstanceContainer> instances, Instance instance) {
-        for (HashMap.Entry<String, InstanceContainer> entry : instances.entrySet()) {
+    public static String getInstanceName(Instance instance) {
+        for (HashMap.Entry<String, InstanceContainer> entry : INSTANCES.entrySet()) {
             if (Objects.equals(instance, entry.getValue())) {
                 return entry.getKey();
             }
@@ -47,14 +47,33 @@ public class Main {
         return null;
     }
 
-    public static RedisClient JEDIS = RedisClient.builder().hostAndPort("localhost", 6379).build(); // used to be Jedis JEDIS = new Jedis("localhost", 6379);
+    public static RedisClient JEDIS = RedisClient.builder().hostAndPort("localhost", 6379).build(); // used to be var JEDIS = new Jedis("localhost", 6379);
     public static final Logger LOG = LoggerFactory.getLogger("SKOM");
-    public static final @NotNull String NODE_NAME = System.getenv("NODE_NAME") != null ? System.getenv("NODE_NAME") : "DEV";
     public static Path MAP_PATH = Paths.get(System.getProperty("user.dir"), "maps");
     public static final long STARTED_AT = System.currentTimeMillis();
 
-    void main(String[] args) {
+    static Map<String, Auth> AUTH_TYPES = Map.of(
+            "online", new Auth.Online(),
+            "offline", new Auth.Offline(),
+            "bungee", new Auth.Bungee()
+    );
+    static HashMap<String, String> skomSettings = new HashMap<>(Map.of(
+        "dispatcher_threads", "1",
+        "address", "127.0.0.1",
+        "port", "45565",
+        "auth", "online",
+        "node_name", "DEV"
+    ));
+    public static String NODE_NAME;
+    void main(){
+        for (var env : System.getenv().entrySet()){
+            if (!env.getKey().startsWith("SKM_")) continue;
+            var key = env.getKey().replace("SKM_", "").toLowerCase();
+            if (!skomSettings.containsKey(key)){ Main.LOG.error("Unknown SKM env var {}", env.getKey()); continue;}
+            skomSettings.put(key, env.getValue());
+        }
 
+        NODE_NAME = skomSettings.get("node_name");
         LOG.info("NODE_NAME: {}", NODE_NAME);
         System.setProperty("minestom.dispatcher-threads", String.valueOf(Runtime.getRuntime().availableProcessors()));
 
@@ -64,11 +83,11 @@ public class Main {
         }
         ClassPreloader.preloadAsync();
         MinecraftServer minecraftServer = MinecraftServer.init(
-                new Auth.Online()
+                AUTH_TYPES.get(skomSettings.get("auth"))
         );
-        registerGlobals();
-        minecraftServer.start("127.0.0.1", 45565);
-        LOG.info("started in {}ms", System.currentTimeMillis() - STARTED_AT);
+        registerSkmGlobals();
+        minecraftServer.start(skomSettings.get("address"), Integer.parseInt(skomSettings.get("port")));
+        LOG.info("started in {}ms, connect at {}:{}", System.currentTimeMillis() - STARTED_AT, skomSettings.get("address"), Integer.parseInt(skomSettings.get("port")));
     }
 
     void newInstance(InstanceManager instanceManager, String name, RegistryKey<DimensionType> dimensionType, Consumer<InstanceContainer> cons) {
@@ -87,7 +106,7 @@ public class Main {
         INSTANCES.put(name, instance);
     }
 
-    void registerGlobals() {
+    void registerSkmGlobals() {
         /* Plugins */
         {
             ClientVersionDetector.getInstance();
