@@ -6,6 +6,7 @@ plugins {
     application
     id("com.gradleup.shadow") version "8.3.0"
     id("org.graalvm.buildtools.native") version "0.11.1"
+    id("com.google.osdetector") version "1.7.3"
 }
 
 println("Gradle ${gradle.gradleVersion} with Java ${org.gradle.internal.jvm.Jvm.current()}")
@@ -20,6 +21,8 @@ dependencies {
     // https://repo1.maven.org/maven2/ch/qos/logback/logback-classic/maven-metadata.xml
     implementation("ch.qos.logback:logback-classic:1.5.32")
 
+    // https://repo1.maven.org/maven2/io/valkey/valkey-glide/maven-metadata.xml
+    implementation("io.valkey:valkey-glide:2.3.1+:${osdetector.classifier}")
     // https://repo1.maven.org/maven2/redis/clients/jedis/maven-metadata.xml
     implementation("redis.clients:jedis:7.4.0")
 
@@ -115,8 +118,8 @@ tasks.named<JavaExec>("run") {
     dependsOn("downloadViaProxyAuthHookAgent")
     jvmArgs("-javaagent:${agentJarFile.absolutePath}")
 }
-//
-//application {
-//    applicationDefaultJvmArgs = listOf("-javaagent:${agentJarFile.absolutePath}")
-//    mainClass = skomMainClass
-//}
+
+application {
+    applicationDefaultJvmArgs = listOf("-javaagent:${agentJarFile.absolutePath}")
+    mainClass = skomMainClass
+}
