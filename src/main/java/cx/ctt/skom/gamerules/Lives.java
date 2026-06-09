@@ -17,11 +17,11 @@ public class Lives implements Gamerule {
 
         int defaultLives = Integer.parseInt(Main.JEDIS.hget(dbKey, "Lives"));
         instance.eventNode().addListener(PlayerDeathEvent.class, event -> {
-            if (!lives.keySet().contains(event.getPlayer())){
+            if (!lives.keySet().contains(event.getPlayer())) {
                 lives.put(event.getPlayer(), defaultLives);
             }
             int curLives = lives.get(event.getPlayer());
-            if (curLives == 0){
+            if (curLives == 0) {
                 // do shit when out of lives
             }
             curLives--;

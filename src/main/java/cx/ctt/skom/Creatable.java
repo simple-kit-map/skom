@@ -1,7 +1,6 @@
 package cx.ctt.skom;
 
 import net.minestom.server.command.CommandSender;
-import net.minestom.server.command.builder.Command;
 import net.minestom.server.entity.Player;
 import org.jetbrains.annotations.NotNull;
 

@@ -9,15 +9,16 @@ import net.minestom.server.timer.TaskSchedule;
 
 import java.util.Set;
 
-enum PING_ACTIONS {
-    START,
-    STOP
-}
+
 
 public class PingCommand extends Command {
+    enum PING_ACTIONS {
+        START,
+        STOP
+    }
     static Set<Player> pinging_players;
     public PingCommand() {
-        super("ping");
+        super("ping", "ms");
         var action = ArgumentType.Enum("action", PING_ACTIONS.class);
         setDefaultExecutor((sender, context) -> {
             if (sender instanceof Player p){

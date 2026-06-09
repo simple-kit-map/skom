@@ -5,14 +5,10 @@ import com.google.gson.JsonObject;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.entity.Player;
 import net.minestom.server.event.player.PlayerPluginMessageEvent;
-import net.minestom.server.event.player.PlayerDisconnectEvent;
 import net.minestom.server.tag.Tag;
 import org.slf4j.Logger;
 
 import java.nio.charset.StandardCharsets;
-import java.util.Map;
-import java.util.UUID;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * <a href="https://github.com/Term4/minestom-mechanics-lib/blob/main/minestom-mechanics-lib/src/main/java/com/minestom/mechanics/systems/compatibility/ClientVersionDetector.java">...</a>>

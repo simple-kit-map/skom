@@ -3,8 +3,6 @@ package cx.ctt.skom.commands.mechanics;
 import net.minestom.server.command.builder.Command;
 import net.minestom.server.entity.Player;
 
-import javax.swing.*;
-
 public class FlyCommand extends Command {
         public FlyCommand() {
             super("fly");

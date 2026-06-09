@@ -6,7 +6,6 @@ import cx.ctt.skom.Main;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.command.CommandSender;
 import net.minestom.server.command.builder.Command;
-import net.minestom.server.command.builder.arguments.ArgumentString;
 import net.minestom.server.command.builder.arguments.ArgumentStringArray;
 import net.minestom.server.entity.Player;
 import net.minestom.server.instance.InstanceContainer;
@@ -42,13 +41,13 @@ public class PlayCommand extends Command {
                      IllegalAccessException e) {
                 Main.LOG.error("{}", e.getMessage());
             }
-            Main.LOG.error("LOADING GAMEMODE: {}", clazz.getSimpleName());
+            Main.LOG.info("LOADING GAMEMODE: {}", clazz.getSimpleName());
         }
     }
 
     public PlayCommand() {
         super("play", "pl");
-        var minigameNameArg = new ArgumentString("minigameName");
+        var minigameNameArg = MinigameCommand.MinigameArg;
         var playersArg = new ArgumentStringArray("player(s)");
         addSyntax((sender, context) -> {
             PrepareGame(context.get(minigameNameArg), context.get((playersArg)), sender);
@@ -58,19 +57,22 @@ public class PlayCommand extends Command {
         }, minigameNameArg);
     }
 
-    public void PrepareGame(String mgName, String[] players, CommandSender initiator) {
-
+    static public void PrepareGame(String mgName, String[] players, CommandSender initiator) {
+        if (mgName.startsWith("minigame:")){
+            mgName = mgName.replaceFirst("minigame:", "");
+        }
         Set<Player> parsedPlayers = new HashSet<>();
-        for (String name : players) {
-            Player toAdd = MinecraftServer.getConnectionManager().getOnlinePlayerByUsername(name);
-            if (toAdd == null) {
-                initiator.sendMessage("Player " + name + " is not online");
-                continue;
+        if (players != null) {
+            for (String name : players) {
+                Player toAdd = MinecraftServer.getConnectionManager().getOnlinePlayerByUsername(name);
+                if (toAdd == null) {
+                    initiator.sendMessage("Player " + name + " is not online");
+                    continue;
+                }
+                parsedPlayers.add(toAdd);
             }
-            parsedPlayers.add(toAdd);
         }
         if (parsedPlayers.isEmpty()) {
-            initiator.sendMessage("you did not mention anyone to play the game with :( play alone..");
             parsedPlayers.add((Player) initiator);
         }
         if (Creatable.isNotAlphaNumeric(mgName)) {
@@ -79,11 +81,10 @@ public class PlayCommand extends Command {
         StartGame(mgName, parsedPlayers, (Player) initiator);
     }
 
-    public void StartGame(String mgName, Set<Player> players, Player initiator) {
+    static public void StartGame(String mgName, Set<Player> players, Player initiator) {
         players.add(initiator);
         String mgKey = "minigame:" + mgName;
         var mapName = Main.JEDIS.hget(mgKey, "map");
-
         Path mapPath = WarpCommand.getMapPath(mapName, initiator);
         if (mapPath == null) {
             initiator.sendMessage("No map found for " + mgKey);

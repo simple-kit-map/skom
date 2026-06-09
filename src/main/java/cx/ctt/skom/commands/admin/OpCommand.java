@@ -6,14 +6,16 @@ import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.arguments.ArgumentType;
 import net.minestom.server.entity.Player;
 
+// first player needs to be OP'd from redis-cli
+//! echo "hset skm:admin:op c8bcf862-e997-4a54-9c59-681bd22096e5 Couleur" | redis-cli
 public class OpCommand extends Command {
     public static final String OP_KEY = "skm:admin:op";
 
     public OpCommand() {
         super("op");
         var target = ArgumentType.Entity("target").onlyPlayers(true);
-        addSyntax((sender, ctx) -> {
-            var player = ctx.get(target).findFirstPlayer(sender);
+        addSyntax((sender, context) -> {
+            var player = context.get(target).findFirstPlayer(sender);
             if (player == null) {
                 sender.sendMessage("Player not found.");
                 return;

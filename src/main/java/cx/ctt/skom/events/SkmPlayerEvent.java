@@ -1,19 +1,19 @@
 package cx.ctt.skom.events;
 
 import cx.ctt.skom.Main;
+import cx.ctt.skom.commands.admin.BanCommand;
 import cx.ctt.skom.commands.content.SpawnCommand;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.ansi.ANSIComponentSerializer;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import net.minestom.server.adventure.audience.Audiences;
 import net.minestom.server.coordinate.Pos;
 import net.minestom.server.entity.GameMode;
 import net.minestom.server.entity.Player;
-import net.minestom.server.entity.attribute.Attribute;
 import net.minestom.server.event.GlobalEventHandler;
 import net.minestom.server.event.player.AsyncPlayerConfigurationEvent;
 import net.minestom.server.event.player.PlayerDisconnectEvent;
-import net.minestom.server.event.player.PlayerLoadedEvent;
 import net.minestom.server.event.player.PlayerSpawnEvent;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.network.NetworkBuffer;
@@ -31,10 +31,19 @@ public class SkmPlayerEvent {
 
     public static void register(GlobalEventHandler globalEventHandler) {
 
-        globalEventHandler.addListener(PlayerSpawnEvent.class, event ->
-                event.getPlayer().getAttribute(Attribute.ATTACK_SPEED).setBaseValue(1024.0));
+//        globalEventHandler.addListener(PlayerSpawnEvent.class, event ->
+//                event.getPlayer().getAttribute(Attribute.ATTACK_SPEED).setBaseValue(1024.0));
         globalEventHandler.addListener(AsyncPlayerConfigurationEvent.class, event -> {
             final Player player = event.getPlayer();
+            if (BanCommand.isBanned(player.getUuid())){
+
+                Main.LOG.info(ANSIComponentSerializer.ansi().serialize(
+                Component.text("PLAYER.BANNED_JOIN_ATTEMPT." + player.getUuid() + "." + player.getUsername()).color(NamedTextColor.DARK_RED)
+                ));
+                player.kick("Timed out");
+                player.getPlayerConnection().disconnect();
+                return;
+            }
             Main.JEDIS.hset("player_cache", player.getUuid().toString(), player.getUsername());
             event.setSpawningInstance(Main.INSTANCES.get("spawn"));
             setAnimatiumFeatures(player, Set.of(Feature.ALL, Feature.MISS_PENALTY, Feature.LEFT_CLICK_ITEM_USAGE));
@@ -47,16 +56,24 @@ public class SkmPlayerEvent {
             if (lastItems.containsKey(player.getUuid())) {
                 player.getInventory().copyContents(lastItems.get(player.getUuid()));
             }
-            player.setGameMode(GameMode.CREATIVE);
-            player.setPermissionLevel(4);
+            if (Main.JEDIS.hexists("skm:admin:op", player.getUuid().toString())) {
+                player.setGameMode(GameMode.CREATIVE);
+                player.setPermissionLevel(4);
+            }
 
 //            event.setHardcore(true);
-            Component username = player.getDisplayName() != null ? player.getDisplayName() : Component.text(player.getUsername());
+
+            Component joinMsg = Component.text("PLAYER.JOIN." + player.getUuid() + "." + player.getUsername()).color(NamedTextColor.GREEN);
+            String displayName = PlainTextComponentSerializer.plainText().serialize(player.getName());
+            if (!Main.JEDIS.hget("player_cache", player.getUuid().toString()).equals(displayName)){
+                joinMsg = joinMsg.append(Component.text(" (nicked " +displayName + ")"));
+            }
             Main.LOG.info(ANSIComponentSerializer.ansi().serialize(
-                    Component.text("PLAYER.JOIN." + player.getUuid().toString() + "." + player.getUsername()).color(NamedTextColor.GREEN)
+                    joinMsg
             ));
+
 //            player.sendMessage(joinMsg);
-        });
+        }).setPriority(1);
         globalEventHandler.addListener(PlayerSpawnEvent.class, event -> {
             if (!event.isFirstSpawn()) return;
             final Player player = event.getPlayer();
@@ -74,7 +91,7 @@ public class SkmPlayerEvent {
             Component username = player.getDisplayName() != null ? player.getDisplayName() : Component.text(player.getUsername());
             Component leaveMsg = username.color(NamedTextColor.YELLOW).append(Component.text(" left the game"));
             Main.LOG.info(ANSIComponentSerializer.ansi().serialize(
-                    Component.text("PLAYER.LEAVE." + player.getUuid().toString() + "." + player.getUsername()).color(NamedTextColor.RED)
+                    Component.text("PLAYER.LEAVE." + player.getUuid() + "." + player.getUsername()).color(NamedTextColor.RED)
             ));
             Audiences.players().sendMessage(leaveMsg);
         });

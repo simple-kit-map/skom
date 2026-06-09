@@ -5,9 +5,17 @@ import ca.spottedleaf.oldgenerator.listener.LegacyPopulateHack;
 import cx.ctt.skom.commands.admin.MotdCommand;
 import cx.ctt.skom.commands.admin.UnknownCommand;
 import cx.ctt.skom.commands.vanilla.GamemodeCommand;
-import cx.ctt.skom.events.*;
-import cx.ctt.skom.gamerules.AllowItemDrops;
-import fr.ghostrider584.axiom.AxiomMinestom;
+import cx.ctt.skom.events.OnPlayerPickBlock;
+import cx.ctt.skom.events.SkmChatEvent;
+import cx.ctt.skom.events.SkmCommandEvent;
+import cx.ctt.skom.events.SkmPlayerEvent;
+import cx.ctt.skom.gamerules.ItemDrops;
+import io.github.term4.minestommechanics.MinestomMechanics;
+import io.github.term4.minestommechanics.Vanilla18;
+import io.github.term4.minestommechanics.mechanics.attack.AttackSystem;
+import io.github.term4.minestommechanics.mechanics.damage.DamageConfig;
+import io.github.term4.minestommechanics.mechanics.damage.DamageSystem;
+import io.github.term4.minestommechanics.mechanics.knockback.KnockbackSystem;
 import net.minestom.server.Auth;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.command.CommandManager;
@@ -57,12 +65,13 @@ public class Main {
             "offline", new Auth.Offline(),
             "bungee", new Auth.Bungee()
     );
-    static HashMap<String, String> skomSettings = new HashMap<>(Map.of(
-        "dispatcher_threads", "1",
-        "address", "127.0.0.1",
+    public static HashMap<String, String> skomSettings = new HashMap<>(Map.of(
+        // "dispatcher_threads", "1", // just use minestom.dispatcher-threads bro
+        "address", "0.0.0.0",
         "port", "45565",
         "auth", "online",
-        "node_name", "DEV"
+        "node_name", "DEV",
+        "gamerule_url", "https://github.com/simple-kit-map/skom/blob/main/src/main/java/cx/ctt/skom/gamerules/{0}.java"
     ));
     public static String NODE_NAME;
     void main(){
@@ -75,13 +84,11 @@ public class Main {
 
         NODE_NAME = skomSettings.get("node_name");
         LOG.info("NODE_NAME: {}", NODE_NAME);
-        System.setProperty("minestom.dispatcher-threads", String.valueOf(Runtime.getRuntime().availableProcessors()));
 
         if (!Files.exists(MAP_PATH) || !Files.isDirectory(MAP_PATH)) {
             LOG.error("'maps' folder NOT FOUND!, did you forget to make one, or are you not in the right directory?");
             System.exit(1);
         }
-        ClassPreloader.preloadAsync();
         MinecraftServer minecraftServer = MinecraftServer.init(
                 AUTH_TYPES.get(skomSettings.get("auth"))
         );
@@ -101,7 +108,7 @@ public class Main {
             instance = instanceManager.createInstanceContainer(dimensionType);
         }
         cons.accept(instance);
-        instance.setTimeRate(0);
+//        instance.setTimeRate(0); // not available in 26.1, did they make it opt in?
         instance.setChunkSupplier(LightingChunk::new);
         INSTANCES.put(name, instance);
     }
@@ -110,7 +117,24 @@ public class Main {
         /* Plugins */
         {
             ClientVersionDetector.getInstance();
-            AxiomMinestom.initialize();
+//            AxiomMinestom.initialize();
+            /* Term4's MinestomMechanics */
+            {
+                // Get mm instance
+                MinestomMechanics mm = MinestomMechanics.getInstance();
+
+                // Initialize mm
+                mm.init();
+
+                // 1. Initialize knockback system
+                KnockbackSystem.install(mm, Vanilla18.kb());
+
+                // 2. Initialize damage system
+                DamageSystem.install(mm, new DamageConfig()); // This is hard coded for now, will be moved later
+
+                // 3. Initialize combat system
+                AttackSystem.install(mm, Vanilla18.atk());
+            }
         }
         /* Instances */
         {
@@ -142,8 +166,8 @@ public class Main {
                 SkmChatEvent.register(handler);
                 SkmPlayerEvent.register(handler);
                 OnPlayerPickBlock.register(handler);
-                AllowItemDrops.register(handler);
-                Knockback.register(handler);
+//                ItemDrops.register(handler);
+//                Knockback.register(handler);
             }
             /* Commands */
             {
@@ -157,10 +181,13 @@ public class Main {
                 var commands = new Reflections(this.getClass().getPackageName()+".commands").getSubTypesOf(Command.class);
                 for (Class<?> cmd : commands) {
                     try {
+                        if (cmd.getEnclosingClass() != null) continue;
+                        if (cmd.getSimpleName().contains("Simple")) continue;
+                        Main.LOG.info("{}", cmd.getTypeName());
                         var a = cmd.getDeclaredConstructor().newInstance();
                         commandManager.register((Command)a);
                     } catch (Exception e) {
-                        Main.LOG.error(e.getMessage());
+                        Main.LOG.error(e.getCause().getMessage());
                     }
                 }
             }

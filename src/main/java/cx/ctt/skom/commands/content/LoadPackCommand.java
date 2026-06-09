@@ -16,9 +16,7 @@ import java.net.http.HttpResponse;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Formatter;
-import java.util.HexFormat;
 import java.util.UUID;
-import java.util.logging.Level;
 
 public class LoadPackCommand extends Command {
     private static final HttpClient HTTP_CLIENT = HttpClient.newHttpClient();
@@ -31,13 +29,13 @@ public class LoadPackCommand extends Command {
         addSyntax(this::executeLoadPack, urlArg);
     }
 
-    private void executeLoadPack(CommandSender sender, CommandContext ctx) {
+    private void executeLoadPack(CommandSender sender, CommandContext context) {
         if (!(sender instanceof Player player)) {
             sender.sendMessage("Only players can use this command.");
             return;
         }
 
-        String urlStr = ctx.get("url");
+        String urlStr = context.get("url");
         URI url;
         try {
             url = URI.create(urlStr);

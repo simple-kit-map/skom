@@ -4,12 +4,9 @@ import cx.ctt.skom.Main;
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.format.NamedTextColor;
 import net.kyori.adventure.text.serializer.ansi.ANSIComponentSerializer;
-import net.minestom.server.MinecraftServer;
+import net.kyori.adventure.text.serializer.legacy.LegacyComponentSerializer;
 import net.minestom.server.event.GlobalEventHandler;
 import net.minestom.server.event.player.PlayerChatEvent;
-import redis.clients.jedis.JedisPubSub;
-
-import java.awt.*;
 
 public class SkmChatEvent {
     public static void register(GlobalEventHandler globalEventHandler) {
@@ -20,6 +17,11 @@ public class SkmChatEvent {
                         ).color(NamedTextColor.YELLOW)
                     )
             );
+            event.setFormattedMessage(
+                    event.getPlayer().getName()
+                            .append(Component.text(": ")
+                                    .append(LegacyComponentSerializer.legacyAmpersand().deserialize(
+                                            event.getRawMessage()))));
 
 //            Main.JEDIS.publish("PlayerChat", Main.NODE_NAME + ':' + event.getPlayer().getUsername() + "> " + event.getRawMessage());
         });

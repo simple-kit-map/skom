@@ -2,6 +2,7 @@ package cx.ctt.skom.commands.content;
 
 import com.google.gson.Gson;
 import com.google.gson.JsonElement;
+import com.google.gson.JsonParser;
 import cx.ctt.skom.Creatable;
 import cx.ctt.skom.Main;
 import net.minestom.server.MinecraftServer;
@@ -16,12 +17,11 @@ import net.minestom.server.inventory.PlayerInventory;
 import net.minestom.server.item.ItemStack;
 import net.minestom.server.item.Material;
 import net.minestom.server.item.component.BlocksAttacks;
-import redis.clients.jedis.json.Path;
-import redis.clients.jedis.json.Path2;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class KitCommand extends Command implements Creatable {
@@ -47,7 +47,7 @@ public class KitCommand extends Command implements Creatable {
         public KitLoad() {
 
             super("load");
-            setDefaultExecutor((sender, commandContext) -> {
+            setDefaultExecutor((sender, context) -> {
                 sender.sendMessage("/kit load <name>");
                 sender.sendMessage("/kit <name>");
             });
@@ -80,12 +80,9 @@ public class KitCommand extends Command implements Creatable {
         }
 
         static void jsonToInventory(PlayerInventory inv, String kitKey) {
-            List<List<String>> keys = Main.JEDIS.jsonObjKeys(kitKey, Path2.of("$"));
+            Map<String, String> keys = Main.JEDIS.hgetAll(kitKey);
             Gson gson = new Gson();
-            if (keys.size() != 1) {
-                throw new IllegalStateException("Multiple object keys found..");
-            }
-            List<String> slots = keys.getFirst().stream().filter(i -> i.startsWith("slot")).toList();
+            List<String> slots = keys.keySet().stream().filter(i -> i.startsWith("slot")).toList();
             for (String slot : slots) {
                 String[] dedupedSlots = slot.substring("slot".length()).split("-");
                 for (String dedupedSlot : dedupedSlots) {
@@ -93,9 +90,9 @@ public class KitCommand extends Command implements Creatable {
                     int slotNo = Integer.parseInt(dedupedSlot);
                     // im using Path v1 to return the object without it in an array []
                     // https://redis.io/docs/latest/develop/data-types/json/path/#access-examples
-                    Object itemData = Main.JEDIS.jsonGet(kitKey, Path.of(slot));
+                    String itemData = Main.JEDIS.hget(kitKey, slot);
 
-                    ItemStack item = ItemStack.CODEC.decode(Transcoder.JSON, gson.toJsonTree(itemData).getAsJsonObject()).orElseThrow();
+                    ItemStack item = ItemStack.CODEC.decode(Transcoder.JSON, JsonParser.parseString(itemData)).orElseThrow();
 
                     if (item.material() == Material.DIAMOND_SWORD) {
                         item = item.with(DataComponents.BLOCKS_ATTACKS, new BlocksAttacks(0f, 0f, List.of(), BlocksAttacks.ItemDamageFunction.DEFAULT, null, null, null));
@@ -124,7 +121,7 @@ public class KitCommand extends Command implements Creatable {
     private static class KitCreate extends Command {
         public KitCreate() {
             super("create");
-            setDefaultExecutor((sender, commandContext) -> {
+            setDefaultExecutor((sender, context) -> {
                 sender.sendMessage("/kit create <name>");
             });
             var kitNameArg = ArgumentType.String("kitName");
@@ -144,16 +141,15 @@ public class KitCommand extends Command implements Creatable {
             }
             String kitKey = "skm:kit:" + kitName;
             inventoryToJson(player, kitKey);
-            Main.JEDIS.jsonSet(kitKey, Path2.of("$.created"), Long.toString(System.currentTimeMillis()));
-            Main.JEDIS.jsonSet(kitKey, Path2.of("$.kitauthor"), '"' + player.getUuid().toString() + '"');
-            Main.JEDIS.jsonSet(kitKey, Path2.of("$.uses"), 0);
-            Main.JEDIS.jsonNumIncrBy(kitKey, Path2.of("$.uses"), 1);
+            Main.JEDIS.hset(kitKey, "created", Long.toString(System.currentTimeMillis()));
+            Main.JEDIS.hset(kitKey, "kitauthor", '"' + player.getUuid().toString() + '"');
+            Main.JEDIS.hset(kitKey, "uses", "0");
+            Main.JEDIS.hincrBy(kitKey, "uses", 1);
         }
 
         private void inventoryToJson(Player player, String kitName) {
             ItemStack[] items = player.getInventory().getItemStacks();
             if (items.length != 46) throw new IllegalStateException("Invalid inventory length");
-            Main.JEDIS.jsonSet(kitName, Path2.ROOT_PATH, "{}");
 
             HashMap<ItemStack, List<Integer>> dedupMap = new HashMap<>();
             for (int slot = 0; slot < items.length; slot++) {
@@ -172,7 +168,7 @@ public class KitCommand extends Command implements Creatable {
             dedupMap.forEach((item, slots) -> {
                 Result<JsonElement> element = ItemStack.CODEC.encode(Transcoder.JSON, item);
 
-                Main.JEDIS.jsonSet(kitName, Path2.of("slot" + slots.stream().map(Object::toString).collect(Collectors.joining("-"))), element.orElseThrow().getAsJsonObject());
+                Main.JEDIS.hset(kitName, ("slot" + slots.stream().map(Object::toString).collect(Collectors.joining("-"))), element.orElseThrow().getAsJsonObject().toString());
             });
         }
     }

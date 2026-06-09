@@ -46,7 +46,7 @@ public class MotdCommand extends Command {
         MinecraftServer.getGlobalEventHandler().addListener(ServerListPingEvent.class, event -> {
 
             int clientVersion = event.getConnection().getProtocolVersion();
-            Main.LOG.info("pinged with version: {}", clientVersion);
+            //Main.LOG.info("pinged with version: {}", clientVersion);
             int serverVersion;
             if (clientVersion >= 4 && clientVersion <= MinecraftServer.PROTOCOL_VERSION) {
                 serverVersion = clientVersion;

@@ -29,6 +29,10 @@ public class WarpCommand extends SimpleCommand {
     }
 
     public static @Nullable Path getMapPath(String mapName, CommandSender sender) {
+        if (mapName == null){
+            sender.sendMessage("getMapPath: provided map name is empty, did you add `map` to your mini-game?");
+            return null;
+        }
         Path path = java.nio.file.Paths.get(Main.MAP_PATH.toString(), mapName);
         if (!Files.exists(path) || !Files.isDirectory(path)) {
             Main.LOG.error("{} was attempted to be warped to", path);

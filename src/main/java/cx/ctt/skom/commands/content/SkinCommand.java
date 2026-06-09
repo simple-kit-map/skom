@@ -7,9 +7,7 @@ import net.minestom.server.command.builder.Command;
 import net.minestom.server.command.builder.arguments.ArgumentType;
 import net.minestom.server.entity.Player;
 import net.minestom.server.entity.PlayerSkin;
-import net.minestom.server.event.player.AsyncPlayerPreLoginEvent;
 import net.minestom.server.event.player.PlayerSkinInitEvent;
-import net.minestom.server.network.player.GameProfile;
 
 public class SkinCommand extends Command {
     public static final String SKIN_KEY = "skm:feature:skin";
@@ -28,9 +26,9 @@ public class SkinCommand extends Command {
 
         var usernameArg = ArgumentType.Word("username");
 
-        addSyntax((sender, commandContext) -> {
+        addSyntax((sender, context) -> {
             if (sender instanceof Player p) {
-                String username = commandContext.get(usernameArg);
+                String username = context.get(usernameArg);
                 if (Creatable.isNotAlphaNumeric(username)) {
                     sender.sendMessage("invalid username");
                     return;

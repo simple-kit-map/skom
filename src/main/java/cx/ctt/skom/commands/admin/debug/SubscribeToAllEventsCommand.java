@@ -1,23 +1,22 @@
 package cx.ctt.skom.commands.admin.debug;
 
-import cx.ctt.skom.Main;
 import net.minestom.server.MinecraftServer;
 import net.minestom.server.command.builder.Command;
-import net.minestom.server.entity.Player;
-import net.minestom.server.event.book.*;
+import net.minestom.server.event.book.EditBookEvent;
 import net.minestom.server.event.entity.*;
-import net.minestom.server.event.entity.projectile.*;
+import net.minestom.server.event.entity.projectile.ProjectileCollideWithBlockEvent;
+import net.minestom.server.event.entity.projectile.ProjectileCollideWithEntityEvent;
+import net.minestom.server.event.entity.projectile.ProjectileUncollideEvent;
 import net.minestom.server.event.instance.*;
-import net.minestom.server.event.server.*;
-import net.minestom.server.event.player.*;
-import net.minestom.server.event.trait.*;
-
 import net.minestom.server.event.inventory.*;
 import net.minestom.server.event.item.*;
-import net.minestom.server.network.player.PlayerConnection;
+import net.minestom.server.event.player.*;
+import net.minestom.server.event.server.ClientPingServerEvent;
+import net.minestom.server.event.server.ServerListPingEvent;
+import net.minestom.server.event.server.ServerTickMonitorEvent;
+import net.minestom.server.event.trait.*;
 
 import java.util.HashSet;
-import java.util.List;
 import java.util.Set;
 
 public class SubscribeToAllEventsCommand extends Command {
@@ -26,7 +25,7 @@ public class SubscribeToAllEventsCommand extends Command {
     public SubscribeToAllEventsCommand() {
         super("subscribe");
 
-        setDefaultExecutor((sender, commandContext) -> {
+        setDefaultExecutor((sender, context) -> {
             var events = Set.of(
                     EditBookEvent.class,
                     EntityAttackEvent.class,
@@ -104,7 +103,7 @@ public class SubscribeToAllEventsCommand extends Command {
                     PlayerSettingsChangeEvent.class,
                     PlayerSkinInitEvent.class,
                     PlayerSpawnEvent.class,
-                    PlayerSpectateEvent.class,
+//                    PlayerSpectateEvent.class,
                     PlayerStartDiggingEvent.class,
                     PlayerStartFlyingEvent.class,
                     PlayerStartFlyingWithElytraEvent.class,
