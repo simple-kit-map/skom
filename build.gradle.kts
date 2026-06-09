@@ -22,12 +22,12 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.5.32")
 
     // https://repo1.maven.org/maven2/io/valkey/valkey-glide/maven-metadata.xml
-    implementation("io.valkey:valkey-glide:2.3.1+:${osdetector.classifier}")
+    implementation("io.valkey:valkey-glide:2.4.0-rc2+:${osdetector.classifier}")
     // https://repo1.maven.org/maven2/redis/clients/jedis/maven-metadata.xml
-    implementation("redis.clients:jedis:7.4.0")
+    implementation("redis.clients:jedis:7.5.0")
 
     // https://repo1.maven.org/maven2/net/minestom/minestom/maven-metadata.xml
-    implementation("net.minestom:minestom:2026.03.25-1.21.11")
+    implementation("net.minestom:minestom:2026.05.17c-26.1.1")
     // https://repo.smolder.fr/#/public/fr/ghostrider584/axiom-minestom
     implementation("fr.ghostrider584:axiom-minestom:0.0.4")
 
